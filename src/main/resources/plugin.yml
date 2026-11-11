@@ -4,7 +4,7 @@ version: ${version}
 author: etran
 description: Menu-driven arena, group and bulk management for BedWars1058.
 depend: [BedWars1058]
-softdepend: [BedWars1058-MapLoader]
+softdepend: [BedWars1058-MapLoader, BedWars1058-MultiGroup]
 # 1.8 - 1.12 servers ignore this key. On 1.13+ it stops the server treating the plugin as
 # "legacy" (which would remap material names). 1.13 is the lowest valid value.
 api-version: "1.13"

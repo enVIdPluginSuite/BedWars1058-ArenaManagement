@@ -41,6 +41,9 @@ class ArenaManagementPlugin : JavaPlugin() {
      */
     val mapLoader: org.bukkit.plugin.Plugin? get() = server.pluginManager.getPlugin("BedWars1058-MapLoader")
 
+    /** BedWars1058-MultiGroup, if installed: it owns the variants of maps shared between groups. */
+    val multiGroup: org.bukkit.plugin.Plugin? get() = server.pluginManager.getPlugin("BedWars1058-MultiGroup")
+
     /** `/bw gui` menus currently open; the refresh task keeps their player counts live. */
     val liveSelectors: MutableSet<ArenaSelectorMenu> = LinkedHashSet()
 

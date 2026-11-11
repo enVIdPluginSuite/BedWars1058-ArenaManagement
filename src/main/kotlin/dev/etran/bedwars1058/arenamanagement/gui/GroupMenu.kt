@@ -3,11 +3,12 @@ package dev.etran.bedwars1058.arenamanagement.gui
 import dev.etran.bedwars1058.arenamanagement.ArenaManagementPlugin
 import dev.etran.bedwars1058.arenamanagement.arena.ArenaState
 import dev.etran.bedwars1058.arenamanagement.arena.Filter
+import dev.etran.bedwars1058.arenamanagement.arena.GroupChoice
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.ClickType
 
 /**
- * `/bw arenaGroup` - every group, with create / list / remove / assign.
+ * `/bw arenaGroup` - every group, with create / list / remove / assign / duplicate / combine.
  *
  *   Left-click a group         move the current selection into it
  *   Right-click a group        browse its maps
@@ -16,7 +17,7 @@ import org.bukkit.event.inventory.ClickType
 class GroupMenu(plugin: ArenaManagementPlugin, player: Player) : Menu(plugin, player) {
     override val rows = 6
     private val session = plugin.sessions.get(player)
-    private val pageSize = 45
+    private val pageSize = 36
     private var page = 0
 
     override fun title() = "&8Arena Groups"
@@ -65,6 +66,25 @@ class GroupMenu(plugin: ArenaManagementPlugin, player: Player) : Menu(plugin, pl
             go(ArenaBrowserMenu(plugin, player))
         })
         set(8, icon("close", "&cClose"), { player.closeInventory() })
+
+        // ---- bottom row: whole-group tools
+        set(
+            46,
+            icon(
+                "action-clone", "&bDuplicate a group",
+                if (plugin.ops.usesMultiGroup()) listOf("&7Copies a group under a new name.", "&7MultiGroup is installed: only the", "&7configs are copied, worlds are shared.", "", "&eClick to choose a group")
+                else listOf("&7Copies a group under a new name:", "&7every map's world and config is cloned", "&7to <map>-<newgroup>.", "", "&eClick to choose a group")
+            ),
+            { startDuplicate() }
+        )
+        set(
+            48,
+            icon(
+                "action-group", "&bCombine groups",
+                listOf("&7Merges one group into another:", "&7its maps move to the target group", "&7and the emptied group is removed.", "", "&eClick to choose the group to merge")
+            ),
+            { startCombine() }
+        )
 
         // ---- groups
         groups.drop(page * pageSize).take(pageSize).forEachIndexed { index, group ->
@@ -117,5 +137,72 @@ class GroupMenu(plugin: ArenaManagementPlugin, player: Player) : Menu(plugin, pl
             }
             else -> {}
         }
+    }
+
+    // ---------------------------------------------------------------- duplicate
+
+    private fun startDuplicate() {
+        go(
+            GroupPickerMenu(
+                plugin, player, "Duplicate which group?", includeAll = false, includeUnassigned = false, allowCreate = false,
+                onPick = { choice ->
+                    val source = (choice as? GroupChoice.Named)?.name
+                    if (source != null) {
+                        plugin.prompts.ask(player, "&eType the name of the new group (a copy of &f$source&e) in chat:") { text ->
+                            if (!plugin.ops.isValidName(text)) {
+                                msg("&cGroup names may only contain letters, digits, _ and - (max 32).")
+                            } else {
+                                ConfirmMenu(
+                                    plugin, player, "&aDuplicate $source as $text?",
+                                    plugin.ops.duplicateSummary(source, text),
+                                    onConfirm = { player.closeInventory(); plugin.ops.duplicateGroup(player, source, text) },
+                                    onCancel = { GroupMenu(plugin, player).open() }
+                                ).open()
+                            }
+                        }
+                    }
+                },
+                onBack = { go(GroupMenu(plugin, player)) }
+            )
+        )
+    }
+
+    // ---------------------------------------------------------------- combine
+
+    private fun startCombine() {
+        go(
+            GroupPickerMenu(
+                plugin, player, "Merge which group?", includeAll = false, includeUnassigned = false, allowCreate = false,
+                onPick = { choice ->
+                    val source = (choice as? GroupChoice.Named)?.name
+                    if (source != null) pickCombineTarget(source)
+                },
+                onBack = { go(GroupMenu(plugin, player)) }
+            )
+        )
+    }
+
+    private fun pickCombineTarget(source: String) {
+        go(
+            GroupPickerMenu(
+                plugin, player, "Merge $source into...", includeAll = false, includeUnassigned = false, allowCreate = true,
+                onPick = { choice ->
+                    val target = (choice as? GroupChoice.Named)?.name
+                    when {
+                        target == null -> {}
+                        target.equals(source, ignoreCase = true) -> msg("&cPick a different group than the one you are merging.")
+                        else -> go(
+                            ConfirmMenu(
+                                plugin, player, "&cMerge $source into $target?",
+                                plugin.ops.combineSummary(source, target),
+                                onConfirm = { player.closeInventory(); plugin.ops.combineGroups(player, listOf(source), target) },
+                                onCancel = { go(GroupMenu(plugin, player)) }
+                            )
+                        )
+                    }
+                },
+                onBack = { startCombine() }
+            )
+        )
     }
 }

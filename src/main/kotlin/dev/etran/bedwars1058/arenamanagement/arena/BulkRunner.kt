@@ -23,6 +23,11 @@ class BulkRunner(private val plugin: ArenaManagementPlugin) {
         val verify: ((ArenaRepository.Snapshot) -> Int)? = null
     )
 
+    companion object {
+        /** Commands starting with this are run by the console instead of the player. */
+        const val CONSOLE = "console:"
+    }
+
     private val queue = ArrayDeque<Job>()
     private var running = false
 
@@ -65,8 +70,13 @@ class BulkRunner(private val plugin: ArenaManagementPlugin) {
 
     private fun dispatch(job: Job, command: String) {
         try {
-            // BedWars1058 refuses console for every management command, so jobs run as the player.
-            plugin.ops.runAsPlayer(job.owner, command)
+            if (command.startsWith(CONSOLE)) {
+                // BedWars1058-MultiGroup's /bwmg is not tied to a player; the console always has its permission.
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.removePrefix(CONSOLE).removePrefix("/"))
+            } else {
+                // BedWars1058 refuses console for every management command, so jobs run as the player.
+                plugin.ops.runAsPlayer(job.owner, command)
+            }
         } catch (t: Throwable) {
             plugin.logger.warning("Command '$command' failed: ${t.javaClass.simpleName}: ${t.message}")
         }
