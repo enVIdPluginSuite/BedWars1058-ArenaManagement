@@ -87,6 +87,20 @@ class BulkMenu(plugin: ArenaManagementPlugin, player: Player) : Menu(plugin, pla
             )
         })
 
+        set(33, icon("action-create", "&bAdd to another group", listOf("&7Maps affected: &f${setUp.size}", "&7Each also plays in the group, with its own config copy.", "", "&eClick to choose a group")), {
+            if (guard(setUp.isEmpty(), "None of the selected maps are set up.")) return@set
+            go(
+                GroupPickerMenu(
+                    plugin, player, "Also add ${setUp.size} map(s) to...", includeAll = false, includeUnassigned = false, allowCreate = true,
+                    onPick = { choice ->
+                        if (choice is GroupChoice.Named) plugin.ops.addToGroup(player, names, choice.name)
+                        player.closeInventory()
+                    },
+                    onBack = { go(BulkMenu(plugin, player)) }
+                )
+            )
+        })
+
         val enableCount = selected.count { it.state == ArenaState.DISABLED }
         set(29, icon("action-enable", "&aEnable", listOf("&7Maps affected: &f$enableCount", "&8(only disabled, set-up maps)")), {
             if (guard(enableCount == 0, "No selected map can be enabled.")) return@set

@@ -27,6 +27,7 @@ class ArenaOptionsMenu(plugin: ArenaManagementPlugin, player: Player, private va
             icon(
                 "info", "&f${arena.name}",
                 listOf("&7State: ${arena.state.color}${arena.state.label}", "&7Group: &f$groupText") +
+                    (plugin.ops.membershipsOf(arena.name).drop(1).takeIf { it.isNotEmpty() }?.let { listOf("&7Also in: &f" + it.joinToString(", ") { m -> m.group }) } ?: emptyList()) +
                     if (!arena.worldLoaded) (if (plugin.mapLoader != null) listOf("", "&bParked by MapLoader: loads when played.") else listOf("", "&4World not loaded in BedWars1058.", "&cDisable / set up won't work until it is fixed.")) else emptyList()
             )
         )
@@ -44,6 +45,18 @@ class ArenaOptionsMenu(plugin: ArenaManagementPlugin, player: Player, private va
                         plugin, player, "Move ${arena.name} to...", includeAll = false, includeUnassigned = false, allowCreate = true,
                         onPick = { choice ->
                             if (choice is GroupChoice.Named) plugin.ops.setGroup(player, listOf(arena.name), choice.name)
+                            player.closeInventory()
+                        },
+                        onBack = { go(ArenaOptionsMenu(plugin, player, arena.name)) }
+                    )
+                )
+            })
+            set(20, icon("action-create", "&bAdd to another group", listOf("&7The map also plays in the group you pick,", "&7with its own copy of the config.", if (plugin.ops.usesMultiGroup()) "&7(MultiGroup: the world is shared)" else "&7(Cloned to <map>-<group>)", "", "&eClick to choose a group")), {
+                go(
+                    GroupPickerMenu(
+                        plugin, player, "Also add ${arena.name} to...", includeAll = false, includeUnassigned = false, allowCreate = true,
+                        onPick = { choice ->
+                            if (choice is GroupChoice.Named) plugin.ops.addToGroup(player, listOf(arena.name), choice.name)
                             player.closeInventory()
                         },
                         onBack = { go(ArenaOptionsMenu(plugin, player, arena.name)) }
